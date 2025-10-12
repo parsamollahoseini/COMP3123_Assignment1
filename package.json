@@ -1,0 +1,17 @@
+{
+  "name": "comp3123_assignment01",
+  "version": "1.0.0",
+  "description": "COMP 3123 – Assignment 1 (REST API with Node/Express/MongoDB)",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "seed": "node scripts/seed.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {}
+}
