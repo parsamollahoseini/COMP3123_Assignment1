@@ -19,3 +19,4 @@ yarn-error.log*
 # Build / cache
 dist
 coverage
+.vercel

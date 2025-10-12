@@ -11,29 +11,31 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
-// Default route for testing
-app.get("/", (req, res) => {
+
+app.get("/", (_req, res) => {
     res.json({
         status: true,
         message: "COMP3123 Assignment 1 API is running successfully 🚀",
     });
 });
 
-// API routes
+
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/emp", employeeRoutes);
 
-// Port setup
-const PORT = process.env.PORT || 4000;
+await connectDB();
 
-// Connect to MongoDB and start server
-connectDB().then(() => {
+
+export default app;
+
+
+if (!process.env.VERCEL) {
+    const PORT = process.env.PORT || 4000;
     app.listen(PORT, () => {
         console.log(`✅ Server is running at: http://localhost:${PORT}`);
     });
-});
+}
