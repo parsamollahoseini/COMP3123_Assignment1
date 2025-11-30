@@ -62,13 +62,26 @@ app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/emp", employeeRoutes);
 
 /* -------------------- DB + Export For Vercel -------------------- */
-await connectDB();
-export default app;
+let isConnected = false;
 
-/* -------------------- Local Run Only -------------------- */
+async function ensureDB() {
+    if (!isConnected) {
+        await connectDB();
+        isConnected = true;
+    }
+}
+
+// Export handler for Vercel
+export default async function handler(req, res) {
+    await ensureDB();
+    return app(req, res);
+}
+
+// Local development server
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 4000;
+    await ensureDB();
     app.listen(PORT, () => {
-        console.log(`✅ Server is running at: http://localhost:${PORT}`);
+        console.log(`🚀 Local server running at http://localhost:${PORT}`);
     });
 }
