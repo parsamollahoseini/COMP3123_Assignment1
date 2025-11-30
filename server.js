@@ -65,7 +65,7 @@ app.get("/", (_req, res) => {
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/emp", employeeRoutes);
 
-/* -------------------- DB + Vercel Handler -------------------- */
+/* -------------------- DB + Vercel Handler ----------------------------- */
 let isConnected = false;
 
 async function ensureDB() {
@@ -75,7 +75,7 @@ async function ensureDB() {
     }
 }
 
-// ⭐ Vercel handler MUST be default export
+
 export default async function handler(req, res) {
     await ensureDB();
     return app(req, res);
