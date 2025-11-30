@@ -8,16 +8,15 @@ import {
     deleteByQueryValidator,
 } from "../validators/employee.validators.js";
 import { authOptional } from "../middleware/auth.js";
+import upload from "../middleware/upload.js";  // ADD THIS
 
 const router = express.Router();
 
-// Attach optional JWT middleware
 router.use(authOptional);
 
 /**
  * @route   GET /api/v1/emp/employees
  * @desc    Get all employees
- * @access  Public (or Protected if you later enable JWT)
  */
 router.get("/employees", async (_req, res) => {
     try {
@@ -31,6 +30,7 @@ router.get("/employees", async (_req, res) => {
             salary: emp.salary,
             date_of_joining: emp.date_of_joining,
             department: emp.department,
+            profile_picture: emp.profile_picture || '',  // ADD THIS
         }));
         return res.status(200).json(formatted);
     } catch (err) {
@@ -40,11 +40,55 @@ router.get("/employees", async (_req, res) => {
 });
 
 /**
- * @route   POST /api/v1/emp/employees
- * @desc    Create a new employee
- * @access  Public (or Protected)
+ * @route   GET /api/v1/emp/employees/search
+ * @desc    Search employees by department or position
+ * ADD THIS ENTIRE ROUTE
  */
-router.post("/employees", createEmployeeValidator, async (req, res) => {
+router.get("/employees/search", async (req, res) => {
+    try {
+        const { department, position } = req.query;
+
+        let query = {};
+
+        if (department) {
+            query.department = { $regex: department, $options: 'i' };
+        }
+
+        if (position) {
+            query.position = { $regex: position, $options: 'i' };
+        }
+
+        const employees = await Employee.find(query, { __v: 0 }).lean();
+
+        const formatted = employees.map((emp) => ({
+            employee_id: emp._id.toString(),
+            first_name: emp.first_name,
+            last_name: emp.last_name,
+            email: emp.email,
+            position: emp.position,
+            salary: emp.salary,
+            date_of_joining: emp.date_of_joining,
+            department: emp.department,
+            profile_picture: emp.profile_picture || '',
+        }));
+
+        return res.status(200).json({
+            status: true,
+            count: formatted.length,
+            data: formatted
+        });
+    } catch (err) {
+        console.error("Search employees error:", err.message);
+        return res.status(500).json({ status: false, message: "Server error" });
+    }
+});
+
+/**
+ * @route   POST /api/v1/emp/employees
+ * @desc    Create a new employee with profile picture
+ * UPDATE THIS - Add upload.single('profile_picture')
+ */
+router.post("/employees", upload.single('profile_picture'), createEmployeeValidator, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res
@@ -53,7 +97,12 @@ router.post("/employees", createEmployeeValidator, async (req, res) => {
     }
 
     try {
-        const emp = await Employee.create(req.body);
+        const employeeData = {
+            ...req.body,
+            profile_picture: req.file ? `/uploads/${req.file.filename}` : ''  // ADD THIS
+        };
+
+        const emp = await Employee.create(employeeData);
         return res.status(201).json({
             message: "Employee created successfully.",
             employee_id: emp._id.toString(),
@@ -70,7 +119,6 @@ router.post("/employees", createEmployeeValidator, async (req, res) => {
 /**
  * @route   GET /api/v1/emp/employees/:eid
  * @desc    Get a single employee by ID
- * @access  Public (or Protected)
  */
 router.get("/employees/:eid", getByIdValidator, async (req, res) => {
     const errors = validationResult(req);
@@ -93,6 +141,7 @@ router.get("/employees/:eid", getByIdValidator, async (req, res) => {
             salary: emp.salary,
             date_of_joining: emp.date_of_joining,
             department: emp.department,
+            profile_picture: emp.profile_picture || '',  // ADD THIS
         });
     } catch (err) {
         console.error("Get employee by ID error:", err.message);
@@ -102,10 +151,10 @@ router.get("/employees/:eid", getByIdValidator, async (req, res) => {
 
 /**
  * @route   PUT /api/v1/emp/employees/:eid
- * @desc    Update employee details by ID
- * @access  Public (or Protected)
+ * @desc    Update employee details by ID with profile picture
+ * UPDATE THIS - Add upload.single('profile_picture')
  */
-router.put("/employees/:eid", updateEmployeeValidator, async (req, res) => {
+router.put("/employees/:eid", upload.single('profile_picture'), updateEmployeeValidator, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res
@@ -114,7 +163,17 @@ router.put("/employees/:eid", updateEmployeeValidator, async (req, res) => {
     }
 
     try {
-        const updated = await Employee.findByIdAndUpdate(req.params.eid, { $set: req.body }, { new: true });
+        const updateData = { ...req.body };
+
+        if (req.file) {  // ADD THIS
+            updateData.profile_picture = `/uploads/${req.file.filename}`;
+        }
+
+        const updated = await Employee.findByIdAndUpdate(
+            req.params.eid,
+            { $set: updateData },
+            { new: true }
+        );
         if (!updated) return res.status(404).json({ status: false, message: "Employee not found" });
 
         return res.status(200).json({ message: "Employee details updated successfully." });
@@ -127,7 +186,6 @@ router.put("/employees/:eid", updateEmployeeValidator, async (req, res) => {
 /**
  * @route   DELETE /api/v1/emp/employees?eid=xxx
  * @desc    Delete employee by query parameter
- * @access  Public (or Protected)
  */
 router.delete("/employees", deleteByQueryValidator, async (req, res) => {
     const errors = validationResult(req);
@@ -141,7 +199,6 @@ router.delete("/employees", deleteByQueryValidator, async (req, res) => {
         const { eid } = req.query;
         const deleted = await Employee.findByIdAndDelete(eid);
         if (!deleted) return res.status(404).json({ status: false, message: "Employee not found" });
-
 
         return res.status(204).send();
     } catch (err) {
