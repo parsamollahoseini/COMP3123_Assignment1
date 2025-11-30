@@ -23,7 +23,7 @@ const __dirname = dirname(__filename);
 /* -------------------- Environment -------------------- */
 dotenv.config();
 
-/* -------------------- Express App -------------------- */
+/* -------------------- Express App ------------------------- */
 const app = express();
 
 /* -------------------- CORS CONFIG (SIMPLE & WORKING) -------------------- */
