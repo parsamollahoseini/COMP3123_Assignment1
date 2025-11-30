@@ -1,3 +1,8 @@
+/**
+ * COMP3123 – Final Fixed Backend Server
+ * Works locally AND on Vercel
+ */
+
 import express from "express";
 import morgan from "morgan";
 import cors from "cors";
@@ -5,6 +10,8 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+
+// DB + Routes
 import { connectDB } from "./src/db.js";
 import userRoutes from "./src/routes/user.routes.js";
 import employeeRoutes from "./src/routes/employee.routes.js";
@@ -13,16 +20,21 @@ import employeeRoutes from "./src/routes/employee.routes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-/* -------------------- Env -------------------- */
+/* -------------------- Environment -------------------- */
 dotenv.config();
 
+/* -------------------- Express App -------------------- */
 const app = express();
 
-/* -------------------- CORS -------------------- */
+/* -------------------- CORS CONFIG (FINAL + FIXED) -------------------- */
+
 const allowedOrigins = [
-    "http://localhost:3000", // Local React
-    "https://comp3123-assignment2-react.vercel.app", // Your frontend on Vercel
-    "https://comp-3123-assignment1.vercel.app" // Backend domain (optional)
+    "http://localhost:3000",  // Local React
+    "https://comp3123-assignment2-react.vercel.app", // Frontend on Vercel
+
+    // Backend domains
+    "https://comp-3123-assignment1.vercel.app",
+    "https://comp-3123-assignment1-ouzgp4wua-parsas-projects-218077ab.vercel.app", // REAL backend deployment
 ];
 
 app.use(
@@ -31,32 +43,29 @@ app.use(
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
-                console.log("❌ CORS blocked:", origin);
-                callback(new Error("Not allowed by CORS"));
+                console.log("❌ BLOCKED BY CORS:", origin);
+                callback(new Error("CORS Not Allowed"));
             }
         },
         credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        methods: ["GET", "POST", "PUT", "DELETE"],
         allowedHeaders: ["Content-Type", "Authorization"],
     })
 );
 
-/* ❗ IMPORTANT: Remove the broken line:
-   app.options("*", cors());
-   It CRASHES Express 5.0
-*/
+/* ❗ DO NOT USE app.options("*", cors()) — breaks Express 5 */
 
 /* -------------------- Middleware -------------------- */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
-/* -------------------- Static Uploads -------------------- */
+/* -------------------- Static Files -------------------- */
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 /* -------------------- Routes -------------------- */
 app.get("/", (_req, res) => {
-    res.json({
+    return res.json({
         status: true,
         message: "COMP3123 Assignment 1 API is running successfully 🚀",
     });
@@ -65,7 +74,7 @@ app.get("/", (_req, res) => {
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/emp", employeeRoutes);
 
-/* -------------------- DB + Vercel Handler ----------------------------- */
+/* -------------------- MongoDB + Vercel Handler -------------------- */
 let isConnected = false;
 
 async function ensureDB() {
@@ -75,16 +84,21 @@ async function ensureDB() {
     }
 }
 
-
+/**
+ * Vercel Serverless Export (REQUIRED)
+ * This makes Express work on Vercel.
+ */
 export default async function handler(req, res) {
     await ensureDB();
     return app(req, res);
 }
 
-// ⭐ Local dev server
+/* -------------------- Local Development Server -------------------- */
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 4000;
+
     await ensureDB();
+
     app.listen(PORT, () => {
         console.log(`🚀 Local backend running at http://localhost:${PORT}`);
     });
