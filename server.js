@@ -9,18 +9,20 @@ import { connectDB } from "./src/db.js";
 import userRoutes from "./src/routes/user.routes.js";
 import employeeRoutes from "./src/routes/employee.routes.js";
 
+/* -------------------- Paths -------------------- */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+/* -------------------- Env -------------------- */
 dotenv.config();
 
 const app = express();
 
-/* -------------------- FIXED CORS -------------------- */
+/* -------------------- CORS -------------------- */
 const allowedOrigins = [
-    "http://localhost:3000",                                  // local React
-    "https://comp3123-assignment2-react.vercel.app",
-    "https://comp-3123-assignment1.vercel.app"               // optional if backend also calls itself
+    "http://localhost:3000", // Local React
+    "https://comp3123-assignment2-react.vercel.app", // Your frontend on Vercel
+    "https://comp-3123-assignment1.vercel.app" // Backend domain (optional)
 ];
 
 app.use(
@@ -29,7 +31,7 @@ app.use(
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
-                console.log("❌ CORS blocked origin:", origin);
+                console.log("❌ CORS blocked:", origin);
                 callback(new Error("Not allowed by CORS"));
             }
         },
@@ -39,8 +41,10 @@ app.use(
     })
 );
 
-/* Allow handling preflight OPTIONS request */
-app.options("*", cors());
+/* ❗ IMPORTANT: Remove the broken line:
+   app.options("*", cors());
+   It CRASHES Express 5.0
+*/
 
 /* -------------------- Middleware -------------------- */
 app.use(express.json());
@@ -61,7 +65,7 @@ app.get("/", (_req, res) => {
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/emp", employeeRoutes);
 
-/* -------------------- DB + Export For Vercel -------------------- */
+/* -------------------- DB + Vercel Handler -------------------- */
 let isConnected = false;
 
 async function ensureDB() {
@@ -71,17 +75,17 @@ async function ensureDB() {
     }
 }
 
-// Export handler for Vercel
+// ⭐ Vercel handler MUST be default export
 export default async function handler(req, res) {
     await ensureDB();
     return app(req, res);
 }
 
-// Local development server
+// ⭐ Local dev server
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 4000;
     await ensureDB();
     app.listen(PORT, () => {
-        console.log(`🚀 Local server running at http://localhost:${PORT}`);
+        console.log(`🚀 Local backend running at http://localhost:${PORT}`);
     });
 }
